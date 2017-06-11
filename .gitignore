@@ -70,7 +70,12 @@ Thumbs.db
 # --------
 *.dll
 *.exe
-bin/
+
+qt-bin
+cmake-build-debug/
 
 # User files
+# --------
+
+.idea/
 *.user
