@@ -16,14 +16,13 @@ BufferManager::BufferManager(uint64_t pages_in_ram) : cache_size_(pages_in_ram)
 
 BufferManager::~BufferManager() {
     std::lock_guard<std::mutex> lock(mutex_);
-    unsigned size = fifo_.size();
-    for (auto i = fifo_.begin(); i != fifo_.end();) {
+    for (auto i = fifo_.cbegin(); i != fifo_.cend();) {
         if (registry_[*i]->dirty_) {
             page_io_.writePage(registry_[*i]->page_id_, registry_[*i]->getData(), sizeof(page_t));
         }
         i = fifo_.erase(i);
     }
-    for (auto i = registry_.begin(); i != registry_.end();) {
+    for (auto i = registry_.cbegin(); i != registry_.cend();) {
         i = registry_.erase(i);
     }
     free(cache_);
@@ -31,34 +30,33 @@ BufferManager::~BufferManager() {
 
 BufferFrame &BufferManager::fixPage(uint64_t page_id, bool exclusive)
 {
-    uint64_t page_offset = GetPageOffset(page_id);
-    uint64_t segment_id = GetSegment(page_id);
     BufferFrame* frame;
 
     do {
         std::unique_lock<std::mutex> lock(mutex_);
         frame = registry_[page_id];
-        if (frame != nullptr) { // already created
-            if (frame->loaded_) {
+        if (frame != nullptr) // frame was created
+        {
+            if (frame->loaded_) // frame is in cache
+            {
                 assert(frame->i_ < cache_size_);
                 cond_.wait(lock, [&]{ return frame->tryLock(exclusive); });
 
-                if (!frame->loaded_) // someone unloaded the frame while we were waiting
-                {
+                if (!frame->loaded_) // someone unloaded frame while we were waiting
+                {                    // release and reiterate
                     frame->unlock();
                     lock.unlock();
                     cond_.notify_one();
-                }
-                else { // frame still loaded
+                } else { // frame successfully fixed
                     lock.unlock();
-                    break; // loaded frame fixed
+                    break;
                 }
-            } else {
+            } else { // frame not in cache
                 if (putInCache(frame, lock, exclusive)) {
                     break; // cached frame fixed;
                 }
             }
-        } else {
+        } else { // frame not created and not in cache
             frame = new BufferFrame(this, page_id);
             registry_[page_id] = frame;
 
@@ -95,7 +93,8 @@ bool BufferManager::putInCache(BufferFrame *frame, std::unique_lock<std::mutex>&
     BufferFrame* slot;
     cond_.wait(lock, [&]{ return findSlotInCache(frame, slot); });
 
-    if (frame->loaded_) {
+    if (frame->loaded_) // someone put frame in cache while we were waiting
+    {                   // release frame and slot and reiterate
         fifo_.push_front(slot->page_id_);
         frame->unlock();
         slot->unlock();
@@ -108,16 +107,20 @@ bool BufferManager::putInCache(BufferFrame *frame, std::unique_lock<std::mutex>&
         slot->loaded_ = false;
         slot->i_ = -1;
         lock.unlock();
+
+        // IO has to be done without global lock
         if (slot->dirty_) {
             page_io_.writePage(slot->page_id_, &cache_[id], sizeof(page_t));
         }
         page_io_.readPage(frame->page_id_, &cache_[id], sizeof(page_t));
+
         lock.lock();
-        slot->dirty_ = false;
         assert(frame->dirty_ == false);
+        slot->dirty_ = false;
         frame->i_ = id;
         frame->loaded_ = true;
         fifo_.push_back(frame->page_id_);
+
         slot->unlock();
         frame->unlock();
         frame->blockingLock(exclusive);
