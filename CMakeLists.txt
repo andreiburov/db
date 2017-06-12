@@ -5,3 +5,4 @@ add_executable(${PROJECT_NAME} "main.cpp")
 
 add_subdirectory(database)
 add_subdirectory(test)
+
