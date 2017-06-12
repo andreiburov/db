@@ -9,23 +9,16 @@
 #include "Page.h"
 #include "PageIO.h"
 
-#ifdef LOGGING
-#include <fstream>
-#endif
-
 class BufferManager {
     std::mutex mutex_;
     std::condition_variable cond_;
     page_t* cache_;
     PageIO page_io_;
+    uint64_t cache_size_;
 
     // to synchronize
     std::unordered_map<uint64_t, BufferFrame*> registry_;
     std::list<uint64_t> fifo_;
-
-#ifdef LOGGING
-    std::ofstream file;
-#endif
 
 public:
     BufferManager(uint64_t pages_in_ram);
@@ -44,7 +37,8 @@ private:
 
     bool findSlotInCache(BufferFrame* frame, BufferFrame* &slot);
 
-    void putInCache(BufferFrame* frame, std::unique_lock<std::mutex>& lock, bool exclusive);
+    bool putInCache(BufferFrame* frame, std::unique_lock<std::mutex>& lock, bool exclusive);
+
 };
 
 #endif //DB_BUFFERMANAGER_H
