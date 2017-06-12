@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "../../database/buffer/BufferManager.h"
+#include "../../database/dbms.h"
 
 TEST(Manager, WriteReadValue) {
     unsigned expected = 123;

@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "../../database/buffer/Page.h"
+#include "../../database/dbms.h"
 
 TEST(Page, GetSegment) {
     uint64_t segment0 = 0xffff;

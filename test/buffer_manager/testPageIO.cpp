@@ -1,6 +1,5 @@
 #include "gtest/gtest.h"
-#include "../../database/buffer/Page.h"
-#include "../../database/buffer/PageIO.h"
+#include "../../database/dbms.h"
 
 #include <thread>
 
