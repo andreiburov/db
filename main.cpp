@@ -1,15 +1,8 @@
 #include <iostream>
-#include <cstring>
-#include <stdint-gcc.h>
-
-#include "database/buffer/PageIO.h"
-
-using namespace std;
+#include "database/dbms.h"
 
 int main()
 {
-    const char* data = "hello";
-    PageIO pageIO;
-    pageIO.writePage((uint64_t)100U, (void*)data, strlen(data));
+    std::cout << "Here will be example code for database" << std::endl;
     return 0;
 }
