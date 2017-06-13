@@ -4,6 +4,7 @@
 #include "Segment.h"
 #include "TID.h"
 #include "Record.h"
+#include <atomic>
 
 /* SPSegment
  *
@@ -86,7 +87,7 @@ public:
 
 private:
 
-    uint64_t max_page_id_;
+    std::atomic<uint64_t> max_page_id_;
 
 public:
 

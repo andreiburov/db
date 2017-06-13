@@ -2,7 +2,7 @@
 #include <queue>
 #include <iostream>
 #include "SPSegment.h"
-#include "../utils/lockguards.h"
+#include "../utils/LockGuards.h"
 
 TID SPSegment::insert(const Record &r) {
     uint64_t page_offset = 0;

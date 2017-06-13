@@ -15,10 +15,14 @@ set(slotted_pages_SOURCE_FILES
         slotted_pages/SPSegment.cpp slotted_pages/SPSegment.h
         slotted_pages/TID.h)
 
+set(bplus_SOURCE_FILES
+        bplus/BPlusTree.h)
+
 set(utils_SOURCE_FILES
-        utils/lockguards.h)
+        utils/LockGuards.h)
 
 add_library(database
         ${buffer_SOURCE_FILES}
         ${slotted_pages_SOURCE_FILES}
+        ${bplus_SOURCE_FILES}
         ${utils_SOURCE_FILES} dbms.h)

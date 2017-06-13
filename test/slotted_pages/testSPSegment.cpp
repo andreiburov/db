@@ -132,7 +132,7 @@ TEST(SPSegment, MultithreadedUpdateTwoRecords) {
             found = true;
             memcpy(buf, r[i].getData(), r[i].getLen());
             buf[r[i].getLen()] = '\0';
-            std::cout << std::endl << "Found record: " << buf << std::endl;
+            std::cout << "Found record: " << buf << std::endl;
         }
     }
     ASSERT_TRUE(found);

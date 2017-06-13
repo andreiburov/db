@@ -2,6 +2,7 @@
 #define DB_DBMS_H
 
 #include "slotted_pages/SPSegment.h"
-#include "utils/lockguards.h"
+#include "utils/LockGuards.h"
+#include "bplus/BPlusTree.h"
 
 #endif //DB_DBMS_H
