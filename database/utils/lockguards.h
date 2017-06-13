@@ -39,19 +39,35 @@ struct FrameGuard {
               frame(bm.fixPage(page_id, exclusive))
     {}
 
-    bool lock(bool excl = exclusive) {
+    bool lock(bool excl) {
         if (!locked) {
             bm.fixPage(page_id, excl);
+            locked = true;
             exclusive = excl;
             return true;
         }
         return false;
     }
 
-    bool unlock(bool dirty = exclusive) {
+    inline bool lock() {
+        lock(exclusive);
+    }
+
+    inline bool lock(const FrameGuard& guard) {
+        if (page_id != guard.page_id) {
+            lock();
+        }
+    }
+
+    bool unlock(bool dirty) {
         if (locked) {
             bm.unfixPage(frame, dirty);
+            locked = false;
         }
+    }
+
+    inline bool unlock() {
+        unlock(exclusive);
     }
 
     ~FrameGuard() {

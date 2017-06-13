@@ -115,7 +115,6 @@ Record SPSegment::lookup(TID tid) {
 bool SPSegment::update(TID tid, const Record &r) {
     uint64_t page_id = GetFirstPage(segment_id_) + tid.page_offset;
     FrameGuard guard(buffer_manager_, page_id, true);
-    //BufferFrame& frame = buffer_manager_.fixPage(page_id, true);
 
     Header* header = reinterpret_cast<Header*>(guard.frame.getData());
     Slot& slot = getFirstSlot(header)[tid.slot_id];
@@ -125,21 +124,17 @@ bool SPSegment::update(TID tid, const Record &r) {
             header->fragmented_space += slot.length - r.getLen();
             slot.length = r.getLen();
             memcpy(reinterpret_cast<char*>(header) + slot.offset, r.getData(), r.getLen());
-            //buffer_manager_.unfixPage(frame, true);
         } else { // new record content doesn't fit
             if (slot.isUpdated()) {
-                //buffer_manager_.unfixPage(frame, true);
                 return false; // we allow only one update at a time
             }
             uint64_t offset = slot.offset;
             slot.setUpdated();
-            //buffer_manager_.unfixPage(frame, true);
             guard.unlock();
 
             TID new_tid = insert(r);
 
             guard.lock();
-            //frame = buffer_manager_.fixPage(page_id, true);
             if (new_tid.page_offset == tid.page_offset) // new TID in the same page
             {
                 Slot& new_slot = getFirstSlot(header)[new_tid.slot_id];
@@ -149,49 +144,36 @@ bool SPSegment::update(TID tid, const Record &r) {
                 if (new_tid.slot_id < header->first_free_slot) {
                     header->first_free_slot = new_tid.slot_id;
                 }
-            } else {
+            } else { // add Redirection to the new TID
                 slot.setRedirection(new_tid);
             }
-            //buffer_manager_.unfixPage(frame, true);
         }
     } else if (slot.isRedirection())
     {
-        TID rdr_tid = slot.getRedirection(); // redirection_tid
-        assert(tid != rdr_tid);
-        //buffer_manager_.unfixPage(frame, false);
+        TID rd_tid = slot.getRedirection(); // Redirection TID
+        assert(tid != rd_tid);
         guard.unlock(false);
 
-        if (!update(rdr_tid, r)) {
+        if (!update(rd_tid, r)) {
             return false;
         }
 
-        FrameGuard rdr_guard(buffer_manager_, GetFirstPage(segment_id_) + rdr_tid.page_offset, true);
-        //BufferFrame& rdr_frame = buffer_manager_.fixPage(GetFirstPage(segment_id_) +
-                                                                 rdr_tid.page_offset, true);
-        Header* rdr_header = reinterpret_cast<Header*>(rdr_guard.frame.getData());
-        Slot& rdr_slot = getFirstSlot(rdr_header)[rdr_tid.slot_id];
+        FrameGuard rd_guard(buffer_manager_, GetFirstPage(segment_id_) + rd_tid.page_offset, true);
+        Header* rd_header = reinterpret_cast<Header*>(rd_guard.frame.getData());
+        Slot& rd_slot = getFirstSlot(rd_header)[rd_tid.slot_id];
 
-        if (!rdr_slot.isRedirection()) // one level of redirection is okay
+        if (rd_slot.isRedirection()) // collapse two level Redirection
         {
-            int xxx = 1;
-            //buffer_manager_.unfixPage(rdr_frame, false);
-        } else {
-            //frame = buffer_manager_.fixPage(page_id, true);
-            guard.lock();
-            //header = reinterpret_cast<Header*>(frame.getData());
-            //slot = getFirstSlot(header)[tid.slot_id];
-            slot.setRedirection(rdr_slot.getRedirection());
-            //buffer_manager_.unfixPage(frame, true);
+            guard.lock(rd_guard); // to avoid deadlock
+            slot.setRedirection(rd_slot.getRedirection());
             guard.unlock();
 
-            rdr_slot.setFree();
-            if (rdr_tid.slot_id < rdr_header->first_free_slot) {
-                rdr_header->first_free_slot = rdr_tid.slot_id;
+            rd_slot.setFree();
+            if (rd_tid.slot_id < rd_header->first_free_slot) {
+                rd_header->first_free_slot = rd_tid.slot_id;
             }
-            //buffer_manager_.unfixPage(rdr_frame, true);
         }
-    } else {
-        //buffer_manager_.unfixPage(frame, false);
+    } else { // Slot is nor Record, nor Redirection
         return false;
     }
 
