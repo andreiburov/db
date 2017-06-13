@@ -9,6 +9,20 @@
 #include "Page.h"
 #include "PageIO.h"
 
+/* Buffer Manager
+ *
+ * - fixPage(page_id, exclusive)
+ *     Load in RAM and acquire page in order to perform action on it's data.
+ *
+ *     page_id - segment_id + page_offset
+ *     exclusive - are you going to modify this page?
+ *
+ * - BufferFrame& unfixPage(frame, dirty)
+ *     Release page
+ *
+ *     dirty - was page modified?
+ */
+
 class BufferManager {
     std::mutex mutex_;
     std::condition_variable cond_;

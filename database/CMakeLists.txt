@@ -10,7 +10,10 @@ set(buffer_SOURCE_FILES
         buffer/BufferFrame.h buffer/BufferFrame.cpp)
 
 set(slotted_pages_SOURCE_FILES
-        slotted_pages/Record.h)
+        slotted_pages/Record.h
+        slotted_pages/Segment.h
+        slotted_pages/SPSegment.cpp slotted_pages/SPSegment.h
+        slotted_pages/TID.h)
 
 set(utils_SOURCE_FILES
         utils/lockguards.h)

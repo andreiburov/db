@@ -2,6 +2,7 @@
 #define DB_LOCKGUARDS_H
 
 #include <pthread.h>
+#include "../buffer/BufferManager.h"
 
 struct RWLockGuard {
 
@@ -22,6 +23,22 @@ struct RWLockGuard {
             locked = true;
         }
         return ret;
+    }
+};
+
+struct FrameGuard {
+
+    BufferManager& bm;
+    uint64_t page_id;
+    bool exclusive;
+    BufferFrame& frame;
+
+    FrameGuard(BufferManager bm, uint64_t page_id, bool exclusive)
+            : bm(bm), page_id(page_id), exclusive(exclusive), frame(bm.fixPage(page_id, exclusive))
+    {}
+
+    ~FrameGuard() {
+        bm.unfixPage(frame, exclusive);
     }
 };
 

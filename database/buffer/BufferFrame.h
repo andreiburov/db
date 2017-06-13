@@ -8,7 +8,7 @@ class BufferManager;
 
 class BufferFrame {
 
-public:
+    friend BufferManager;
 
     bool loaded_;
     bool dirty_;
@@ -48,9 +48,6 @@ public:
     bool tryLock(bool exclusive);
 
     void unlock();
-
-private:
-    friend BufferManager;
 };
 
 #endif //DB_BUFFERFRAME_H

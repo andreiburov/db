@@ -2,9 +2,9 @@
 #define DB_PAGE_H
 
 //size of segment 2^16 * PAGESIZE
-#define PAGESIZE 4
-#define PAGE_MASK_IN_BITS 16
-#define PAGE_MASK ((1<<PAGE_MASK_IN_BITS)-1)
+const int PAGESIZE = 4;
+const int PAGE_MASK_IN_BITS = 16;
+const int PAGE_MASK = ((1<<PAGE_MASK_IN_BITS)-1);
 
 uint64_t GetSegment(uint64_t page_id);
 uint64_t GetPageOffset(uint64_t page_id);
