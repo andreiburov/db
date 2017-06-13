@@ -10,8 +10,13 @@
 
 /* Comparator functor for uint64_t*/
 struct MyCustomUInt64Cmp {
-    bool operator()(uint64_t a, uint64_t b) const {
-        return a<b;
+    int operator()(uint64_t a, uint64_t b) const {
+        if (a == b)
+            return 0;
+        else if (a < b)
+            return -1;
+        else
+            return 1;
     }
 };
 
@@ -33,10 +38,17 @@ typedef std::pair<uint32_t, uint32_t> IntPair;
 /* Comparator for IntPair */
 struct MyCustomIntPairCmp {
     bool operator()(const IntPair& a, const IntPair& b) const {
-        if (a.first < b.first)
-            return true;
+        if (a.first == b.first) {
+            if (a.second == b.second)
+                return 0;
+            else if (a.second < b.second)
+                return -1;
+            else
+                return 1;
+        } else if (a.first < b.first)
+            return -1;
         else
-            return (a.first == b.first) && (a.second < b.second);
+            return 1;
     }
 };
 
