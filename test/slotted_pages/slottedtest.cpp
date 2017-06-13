@@ -16,9 +16,9 @@ uint64_t extractPage(TID tid) {
 
 const unsigned initialSize = 100; // in (slotted) pages
 const unsigned totalSize = initialSize+50; // in (slotted) pages
-const unsigned maxInserts = 1000ul*1000ul;
-const unsigned maxDeletes = 10ul*1000ul;
-const unsigned maxUpdates = 10ul*1000ul;
+const unsigned maxInserts = initialSize*1000ul;
+const unsigned maxDeletes = initialSize;
+const unsigned maxUpdates = initialSize;
 const double loadFactor = .8; // percentage of a page that can be used to store the payload
 const vector<string> testData = {
         "640K ought to be enough for anybody",
@@ -32,28 +32,26 @@ const vector<string> testData = {
 class Random64 {
     uint64_t state;
 public:
-    explicit Random64(uint64_t seed=88172645463325252ull) : state(seed) {}
+    explicit Random64(uint64_t seed=88172645463325277ull) : state(seed) {}
     uint64_t next() {
         state^=(state<<13); state^=(state>>7); return (state^=(state<<17));
     }
 };
 
 int main(int argc, char** argv) {
-    // Check arguments
-    if (argc != 2) {
-        cerr << "usage: " << argv[0] << " <pageSize>" << endl;
-        return -1;
-    }
-    const unsigned pageSize = atoi(argv[1]);
+
+    const unsigned pageSize = PAGESIZE;
 
     // Bookkeeping
     std::unordered_map<TID, unsigned> values; // TID -> testData entry
     std::unordered_map<unsigned, unsigned> usage; // pageID -> bytes used within this page
 
     // Setting everything
-    BufferManager bm(100);
+    BufferManager bm(initialSize);
     SPSegment sp = SPSegment(bm, 1);
     Random64 rnd;
+
+    uint64_t used = 0;
 
     // Insert some records
     for (unsigned i=0; i<maxInserts; ++i) {
@@ -63,8 +61,11 @@ int main(int argc, char** argv) {
 
         // Check that there is space available for 's'
         bool full = true;
+        uint64_t guess;
+        uint64_t addit = s.size()+sizeof(SPSegment::Slot);
         for (unsigned p=0; p<initialSize; ++p) {
-            if (usage[p] < loadFactor*pageSize) {
+            if (usage[p]+addit < pageSize-sizeof(SPSegment::Header)) {
+                guess = p;
                 full = false;
                 break;
             }
@@ -78,14 +79,27 @@ int main(int argc, char** argv) {
         values[tid]=r;
         unsigned pageId = extractPage(tid); // extract the pageId from the TID
         assert(pageId < initialSize); // pageId should be within [0, initialSize)
-        usage[pageId]+=s.size();
+        usage[pageId] += addit;
+        assert(usage[pageId] < pageSize);
+        used += addit;
     }
+
+    uint64_t storage = pageSize*initialSize;
+    cout << "Out of maxInserts: " << maxInserts << endl;
+    cout << "Completed: " << values.size() << endl;
+    cout << "Pagesize: " << pageSize << endl;
+    cout << "PageCount: " << initialSize << endl;
+    cout << "Used (%): " << used/(double)storage*100 << endl;
 
     // Lookup & delete some records
     for (unsigned i=0; i<maxDeletes; ++i) {
         // Select operation
         bool del = rnd.next()%10 == 0;
 
+        if (values.size() == 0) {
+            cerr << "The amount of records to delete was too small" << endl;
+            return 1;
+        }
         // Select victim
         TID tid = values.begin()->first;
         unsigned pageId = extractPage(tid);

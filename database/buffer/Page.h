@@ -2,7 +2,7 @@
 #define DB_PAGE_H
 
 //size of segment 2^16 * PAGESIZE
-const int PAGESIZE = 4;
+const int PAGESIZE = 4096;
 const int PAGE_MASK_IN_BITS = 16;
 const int PAGE_MASK = ((1<<PAGE_MASK_IN_BITS)-1);
 

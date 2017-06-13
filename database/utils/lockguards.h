@@ -31,14 +31,33 @@ struct FrameGuard {
     BufferManager& bm;
     uint64_t page_id;
     bool exclusive;
+    bool locked;
     BufferFrame& frame;
 
-    FrameGuard(BufferManager bm, uint64_t page_id, bool exclusive)
-            : bm(bm), page_id(page_id), exclusive(exclusive), frame(bm.fixPage(page_id, exclusive))
+    FrameGuard(BufferManager& bm, uint64_t page_id, bool exclusive)
+            : bm(bm), page_id(page_id), exclusive(exclusive), locked(true),
+              frame(bm.fixPage(page_id, exclusive))
     {}
 
+    bool lock(bool excl = exclusive) {
+        if (!locked) {
+            bm.fixPage(page_id, excl);
+            exclusive = excl;
+            return true;
+        }
+        return false;
+    }
+
+    bool unlock(bool dirty = exclusive) {
+        if (locked) {
+            bm.unfixPage(frame, dirty);
+        }
+    }
+
     ~FrameGuard() {
-        bm.unfixPage(frame, exclusive);
+        if (locked) {
+            bm.unfixPage(frame, exclusive);
+        }
     }
 };
 

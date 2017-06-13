@@ -14,15 +14,20 @@ struct TID {
 
     TID(uint16_t slot_id, uint64_t page_offset) : slot_id(slot_id), page_offset(page_offset) {}
 
-    TID(uint64_t tid) : slot_id((uint16_t) (tid & SLOT_MASK)), page_offset(tid & PAGE_MASK) {}
+    TID(uint64_t tid) : slot_id((uint16_t)(((tid & SLOT_MASK))>>48)), page_offset(tid & PAGE_MASK) {}
 
     TID() : slot_id(0), page_offset(0) { }
 
-    uint64_t uint64() { return (slot_id<<48)|page_offset; }
+    uint64_t uint64() { return ((uint64_t)slot_id<<48)|page_offset; }
 
     bool operator==(const TID& other) const {
         return slot_id == other.slot_id &&
                page_offset == other.page_offset;
+    }
+
+    bool operator!=(const TID& other) const {
+        return slot_id != other.slot_id ||
+               page_offset != other.page_offset;
     }
 };
 

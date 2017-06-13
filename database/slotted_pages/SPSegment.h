@@ -38,7 +38,8 @@ public:
         uint64_t data_start;
         // space that would be available after compactification
         unsigned fragmented_space;
-        Header() : slot_count(0), first_free_slot(0), data_start(PAGESIZE), fragmented_space(PAGESIZE-sizeof(Header)) {}
+        Header() : slot_count(0), first_free_slot(0), data_start(PAGESIZE),
+                   fragmented_space(PAGESIZE-sizeof(Header)) {}
     };
 
     struct Slot {
@@ -107,6 +108,10 @@ private:
     void compactify(Header* header);
 
     inline void insert(const Record& r, Header* header, Slot* slot);
+
+    inline Slot* getFirstSlot(Header* header) {
+        return reinterpret_cast<Slot*>(reinterpret_cast<char*>(header)+sizeof(Header));
+    }
 };
 
 
