@@ -1,5 +1,6 @@
 #include <cassert>
 #include <queue>
+#include <iostream>
 #include "SPSegment.h"
 #include "../utils/lockguards.h"
 
@@ -65,6 +66,9 @@ void SPSegment::insert(const Record &r, SPSegment::Header *header, SPSegment::Sl
     header->data_start -= r.getLen();
     slot->offset = header->data_start;
     slot->length = r.getLen();
+
+    checkOverlaps(header, slot);
+
     memcpy(reinterpret_cast<char*>(header)+slot->offset, r.getData(), r.getLen());
 }
 
@@ -183,7 +187,7 @@ bool SPSegment::update(TID tid, const Record &r) {
 void SPSegment::compactify(Header* header) {
     struct SlotComparator {
         bool operator() (Slot* const &a, Slot* const &b) {
-            return a->offset > b->offset;
+            return a->offset < b->offset;
         }
     };
 
@@ -210,4 +214,21 @@ void SPSegment::compactify(Header* header) {
     }
 
     header->data_start = offset;
+}
+
+void SPSegment::checkOverlaps(SPSegment::Header *header, SPSegment::Slot *slot) {
+    uint64_t b = slot->offset;
+    uint64_t e = slot->offset + slot->length;
+    int i = 0;
+    for (Slot* s = getFirstSlot(header); i < header->slot_count; s+=1, ++i)
+    {
+        if (s != slot && s->isRecord()) {
+            if (s->offset < b && s->offset + s->length > b) {
+                std::cerr << "Overlapping beginning" << std::endl;
+            }
+            if (s->offset < e && s->offset + s->length > e) {
+                std::cerr << "Overlapping ending" << std::endl;
+            }
+        }
+    }
 }

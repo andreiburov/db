@@ -103,7 +103,7 @@ public:
 
     bool update(TID tid, const Record& r);
 
-private:
+    // private: exposed for tests
 
     void compactify(Header* header);
 
@@ -112,6 +112,10 @@ private:
     inline Slot* getFirstSlot(Header* header) {
         return reinterpret_cast<Slot*>(reinterpret_cast<char*>(header)+sizeof(Header));
     }
+
+private:
+
+    void checkOverlaps(Header *header, Slot *slot);
 };
 
 
