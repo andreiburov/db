@@ -32,7 +32,7 @@ const vector<string> testData = {
 class Random64 {
     uint64_t state;
 public:
-    explicit Random64(uint64_t seed=/*88172645463325277ull*/time(NULL)) : state(seed) {}
+    explicit Random64(uint64_t seed=time(NULL)) : state(seed) {}
     uint64_t next() {
         state^=(state<<13); state^=(state>>7); return (state^=(state<<17));
     }

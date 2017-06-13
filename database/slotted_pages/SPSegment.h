@@ -107,7 +107,7 @@ public:
 
     void compactify(Header* header);
 
-    inline void insert(const Record& r, Header* header, Slot* slot);
+    void insert(const Record& r, Header* header, Slot* slot);
 
     inline Slot* getFirstSlot(Header* header) {
         return reinterpret_cast<Slot*>(reinterpret_cast<char*>(header)+sizeof(Header));

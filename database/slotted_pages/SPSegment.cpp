@@ -67,7 +67,7 @@ void SPSegment::insert(const Record &r, SPSegment::Header *header, SPSegment::Sl
     slot->offset = header->data_start;
     slot->length = r.getLen();
 
-    checkOverlaps(header, slot);
+    //checkOverlaps(header, slot);
 
     memcpy(reinterpret_cast<char*>(header)+slot->offset, r.getData(), r.getLen());
 }
