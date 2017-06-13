@@ -16,7 +16,7 @@ set(slotted_pages_SOURCE_FILES
         slotted_pages/TID.h)
 
 set(bplus_SOURCE_FILES
-        bplus/BPlusTree.h)
+        index/BPlusTree.h)
 
 set(utils_SOURCE_FILES
         utils/LockGuards.h)
