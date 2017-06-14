@@ -12,18 +12,19 @@ struct IntComparator {
     }
 };
 
+typedef BPlusTree<int, IntComparator> BPT;
+
 /*
  *               16
  *              /  \
  *  1 3 13 15 16   17 18 20 30
  */
 
-int left[5] = {1,3,13,15,16};
-int right[4] = {17,18,20,30};
-
 TEST(BPlusTree, Lookup) {
+
+    int left[5] = {1,3,13,15,16};
+    int right[4] = {17,18,20,30};
     BufferManager bm(3);
-    typedef BPlusTree<int, IntComparator> BPT;
     BPT btree(bm, 2);
 
     uint64_t p0 = GetFirstPage(2);

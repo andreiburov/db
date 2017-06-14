@@ -68,7 +68,7 @@ public:
         uint64_t refs[MAX_COUNT+1];
 
         InnerNode() : Node(false) {}
-        InnerNode(uint64_t left_ref) : Node(false) { refs[0] = left_ref; count++; }
+        InnerNode(uint64_t left_ref) : Node(false) { refs[0] = left_ref; this->count++; }
 
         inline bool isFull() const {
             if (this->count >= MAX_COUNT) {
@@ -86,7 +86,7 @@ public:
         }
 
         inline KEY split(InnerNode* node_right) {
-            unsigned from = MAX_COUNT/2;
+            unsigned from = this->count/2;
             unsigned len = this->count-from;
 
             memcpy(node_right->keys, keys+from, len*sizeof(KEY));
@@ -158,15 +158,15 @@ public:
                 tids[idx] = tid;
                 return;
             }
-            memmove(keys[idx+1], keys[idx], (this->count-idx)*sizeof(KEY));
-            memmove(tids[idx+1], tids[idx], (this->count-idx)*sizeof(TID));
+            memmove(keys+idx+1, keys+idx, (this->count-idx)*sizeof(KEY));
+            memmove(tids+idx+1, tids+idx, (this->count-idx)*sizeof(TID));
             keys[idx] = key;
             tids[idx] = tid;
             this->count++;
         }
 
         inline KEY split(LeafNode* node_right, KEY key, TID tid) {
-            unsigned from = MAX_COUNT/2;
+            unsigned from = this->count/2;
             unsigned len = this->count-from;
 
             memcpy(node_right->keys, keys+from, len*sizeof(KEY));
@@ -174,7 +174,7 @@ public:
             this->count -= len;
             node_right->count += len;
 
-            if (CMP()(keys[this->count-1], key) > 0) {
+            if (CMP()(key, keys[this->count-1]) > 0) {
                 node_right->insert(key, tid);
             } else {
                 insert(key, tid);
