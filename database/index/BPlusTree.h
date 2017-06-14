@@ -23,6 +23,10 @@
  *     Returns a TID or indicates that the key was not found
  */
 
+constexpr unsigned nearest_odd_number(unsigned x){
+    return x - ~(x&1);
+}
+
 template<typename KEY, typename CMP>
 class BPlusTree : public Segment {
 
@@ -62,16 +66,16 @@ public:
     };
 
     struct InnerNode : public Node {
-        static const unsigned MAX_COUNT = (PAGESIZE-sizeof(unsigned)-sizeof(Node))
-                /(sizeof(KEY)+sizeof(uint64_t))-1;
+        static const unsigned MAX_COUNT = nearest_odd_number( // must be odd, for convenient splitting
+                (PAGESIZE-sizeof(unsigned)-sizeof(Node)-sizeof(uint64_t))/(sizeof(KEY)+sizeof(uint64_t)));
         KEY keys[MAX_COUNT];
         uint64_t refs[MAX_COUNT+1];
 
         InnerNode() : Node(false) {}
         InnerNode(uint64_t left_ref) : Node(false) { refs[0] = left_ref; this->count++; }
 
-        inline bool isFull() const {
-            if (this->count >= MAX_COUNT) {
+        inline virtual bool isFull() const { // virtual for testing with sizes other than PAGESIZE
+            if (this->count >= MAX_COUNT+1) { // count references
                 return true;
             }
             return false;
@@ -86,12 +90,13 @@ public:
         }
 
         inline KEY split(InnerNode* node_right) {
+            assert(this->count % 2 == 0 && "Split only even number of refs");
             unsigned from = this->count/2;
             unsigned len = this->count-from;
 
-            memcpy(node_right->keys, keys+from, len*sizeof(KEY));
+            memcpy(node_right->keys, keys+from, (len-1)*sizeof(KEY));
             memcpy(node_right->refs, refs+from, len*sizeof(uint64_t));
-            this->count -= len + 1; // excluding middle value
+            this->count -= len; // excluding middle value
             node_right->count += len;
 
             return keys[this->count-1];
@@ -99,7 +104,7 @@ public:
 
         inline void insert(KEY separator, uint64_t page_right) {
             unsigned idx = getKeyIndex(separator);
-            assert(keys[idx] != separator); // don't insert twice
+            assert(keys[idx] != separator && "Attempt to insert the value, that is already stored");
 
             memmove(keys+idx+1, keys+idx, (this->count-idx)*sizeof(KEY));
             memmove(refs+idx+2, refs+idx+1, (this->count-idx-1)*sizeof(uint64_t));
@@ -203,8 +208,8 @@ public:
     BPlusTree(BufferManager& buffer_manager, uint64_t segment_id)
             : Segment(buffer_manager, segment_id), size_(0) , root_(GetFirstPage(segment_id))
     {
-        assert(sizeof(InnerNode) <= PAGESIZE);
-        assert(sizeof(LeafNode) <= PAGESIZE);
+        assert(sizeof(InnerNode) <= PAGESIZE && "InnerNode larger than PAGESIZE");
+        assert(sizeof(LeafNode) <= PAGESIZE && "LeafNode larger than PAGESIZE");
 
         FrameGuard guard(buffer_manager_, root_, true);
         new(guard.frame.getData()) LeafNode();

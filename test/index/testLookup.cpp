@@ -1,18 +1,6 @@
 #include "gtest/gtest.h"
 #include "../../database/dbms.h"
-
-struct IntComparator {
-    int operator()(const int& a, const int& b) {
-        if (a == b)
-            return 0;
-        else if (a < b)
-            return -1;
-        else
-            return 1;
-    }
-};
-
-typedef BPlusTree<int, IntComparator> BPT;
+#include "bplustree_helper.h"
 
 /*
  *               16
