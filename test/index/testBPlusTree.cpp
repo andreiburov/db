@@ -18,7 +18,10 @@ struct IntComparator {
  *  1 3 13 15 16   17 18 20 30
  */
 
-TEST(BPlusTree, FindLeaf) {
+int left[5] = {1,3,13,15,16};
+int right[4] = {17,18,20,30};
+
+TEST(BPlusTree, Lookup) {
     BufferManager bm(3);
     typedef BPlusTree<int, IntComparator> BPT;
     BPT btree(bm, 2);
@@ -34,5 +37,26 @@ TEST(BPlusTree, FindLeaf) {
     BPT::LeafNode* n1 = new (g1.frame.getData()) BPT::LeafNode();
     BPT::LeafNode* n2 = new (g2.frame.getData()) BPT::LeafNode();
 
-    n0->referencePage()
+    n0->refLeft(16, p1, 0);
+    n0->refRight(16, p2, 0);
+
+    for (int i = 0; i < sizeof(left)/sizeof(int); ++i) {
+        n1->set(left[i], TID(left[i]), i);
+    }
+
+    for (int i = 0; i < sizeof(right)/sizeof(int); ++i) {
+        n2->set(right[i], TID(right[i]), i);
+    }
+
+    for (int i = 0; i < sizeof(left)/sizeof(int); ++i) {
+        TID tid;
+        btree.lookup(left[i], tid);
+        EXPECT_EQ(left[i], tid.page_offset);
+    }
+
+    for (int i = 0; i < sizeof(right)/sizeof(int); ++i) {
+        TID tid;
+        btree.lookup(right[i], tid);
+        EXPECT_EQ(right[i], tid.page_offset);
+    }
 }

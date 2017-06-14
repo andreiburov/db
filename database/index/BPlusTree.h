@@ -32,89 +32,117 @@ public:
         bool leaf;
         unsigned count;
 
-        inline bool isLeaf() {
+        inline bool isLeaf() const {
             return leaf;
         }
 
-        inline virtual unsigned getKeyIndex(KEY key) = 0;
-
-        Node(bool leaf) : leaf(leaf), count(0) {}
-    };
-
-    struct InnerNode : public Node {
-        static const uint64_t MAX_COUNT = (PAGESIZE-sizeof(uint64_t)-sizeof(Node))
-                /(sizeof(KEY)+sizeof(uint64_t))-1;
-        KEY keys[MAX_COUNT];
-        uint64_t refs[MAX_COUNT+1];
-
-        InnerNode() : Node(false) {}
-
-        inline unsigned getKeyIndex(KEY key) {
+        inline unsigned getKeyIndex(const KEY* const keys, const KEY key) const {
             unsigned lo = 0;
-            unsigned hi = count - 1;
+            unsigned hi = this->count - 1;
 
             while (lo < hi) {
                 unsigned md = (lo+hi)/2;
-                int r = CMP(keys[md], key);
+                int r = CMP()(keys[md], key);
                 if (r == 0) {
                     return md;
                 } else if (r < 0) {
-                    lo = md;
+                    lo = md + 1;
                 } else {
                     hi = md;
                 }
             }
 
-            assert(lo == hi);
+            // return where the key should land
             return lo;
         }
 
-        inline uint64_t getPage(KEY key) {
+        inline virtual bool isFull() const = 0;
+
+        Node(bool leaf) : leaf(leaf), count(0) {}
+    };
+
+    struct InnerNode : public Node {
+        static const unsigned MAX_COUNT = (PAGESIZE-sizeof(unsigned)-sizeof(Node))
+                /(sizeof(KEY)+sizeof(uint64_t))-1;
+        KEY keys[MAX_COUNT];
+        uint64_t refs[MAX_COUNT+1];
+
+        InnerNode() : Node(false) {}
+        InnerNode(uint64_t left_ref) : Node(false) { refs[0] = left_ref; count++; }
+
+        inline bool isFull() const {
+            if (this->count >= MAX_COUNT) {
+                return true;
+            }
+            return false;
+        }
+
+        inline unsigned getKeyIndex(const KEY key) const {
+            BPlusTree<KEY, CMP>::Node::getKeyIndex(keys, key);
+        }
+
+        inline uint64_t getPage(const KEY key) const {
             return refs[getKeyIndex(key)];
         }
 
-        inline void referenceLeft(KEY key, uint64_t page_id, unsigned idx) {
-            keys[idx] = key;
-            refs[idx] = page_id;
-            count++;
+        inline KEY split(InnerNode* node_right) {
+            unsigned from = MAX_COUNT/2;
+            unsigned len = this->count-from;
+
+            memcpy(node_right->keys, keys+from, len*sizeof(KEY));
+            memcpy(node_right->refs, refs+from, len*sizeof(uint64_t));
+            this->count -= len + 1; // excluding middle value
+            node_right->count += len;
+
+            return keys[this->count-1];
         }
 
-        inline void referenceRight(KEY key, uint64_t page_id, unsigned idx) {
+        inline void insert(KEY separator, uint64_t page_right) {
+            unsigned idx = getKeyIndex(separator);
+            assert(keys[idx] != separator); // don't insert twice
+
+            memmove(keys+idx+1, keys+idx, (this->count-idx)*sizeof(KEY));
+            memmove(refs+idx+2, refs+idx+1, (this->count-idx-1)*sizeof(uint64_t));
+            keys[idx] = separator;
+            refs[idx+1] = page_right;
+            this->count++;
+        }
+
+        // for tesing
+
+        inline void refLeft(KEY key, uint64_t page_id, unsigned idx) {
+            keys[idx] = key;
+            refs[idx] = page_id;
+            this->count++;
+        }
+
+        inline void refRight(KEY key, uint64_t page_id, unsigned idx) {
             keys[idx] = key;
             refs[idx+1] = page_id;
-            count++;
+            this->count++;
         }
     };
 
     struct LeafNode : public Node {
-        static const uint64_t MAX_COUNT = (PAGESIZE-sizeof(uint64_t)-sizeof(Node))
+        static const unsigned MAX_COUNT = (PAGESIZE-sizeof(unsigned)-sizeof(Node))
                                           /(sizeof(KEY)+sizeof(TID));
         KEY keys[MAX_COUNT];
         TID tids[MAX_COUNT];
 
         LeafNode() : Node(true) {}
 
-        inline unsigned getKeyIndex(KEY key) {
-            unsigned lo = 0;
-            unsigned hi = count - 1;
-
-            while (lo < hi) {
-                unsigned md = (lo+hi)/2;
-                int r = CMP(keys[md], key);
-                if (r == 0) {
-                    return md;
-                } else if (r < 0) {
-                    lo = md;
-                } else {
-                    hi = md;
-                }
+        inline bool isFull() const {
+            if (this->count >= MAX_COUNT) {
+                return true;
             }
-
-            assert(lo == hi);
-            return lo;
+            return false;
         }
 
-        inline bool getTID(KEY key, TID& tid) {
+        inline unsigned getKeyIndex(const KEY key) const {
+            BPlusTree<KEY, CMP>::Node::getKeyIndex(keys, key);
+        }
+
+        inline bool getTID(const KEY key, TID& tid) const {
             unsigned idx = getKeyIndex(key);
             if (keys[idx] == key) {
                 tid = tids[idx];
@@ -123,12 +151,52 @@ public:
 
             return false;
         }
+
+        inline void insert(KEY key, TID tid) {
+            unsigned idx = getKeyIndex(key);
+            if (keys[idx] == key) {
+                tids[idx] = tid;
+                return;
+            }
+            memmove(keys[idx+1], keys[idx], (this->count-idx)*sizeof(KEY));
+            memmove(tids[idx+1], tids[idx], (this->count-idx)*sizeof(TID));
+            keys[idx] = key;
+            tids[idx] = tid;
+            this->count++;
+        }
+
+        inline KEY split(LeafNode* node_right, KEY key, TID tid) {
+            unsigned from = MAX_COUNT/2;
+            unsigned len = this->count-from;
+
+            memcpy(node_right->keys, keys+from, len*sizeof(KEY));
+            memcpy(node_right->tids, tids+from, len*sizeof(TID));
+            this->count -= len;
+            node_right->count += len;
+
+            if (CMP()(keys[this->count-1], key) > 0) {
+                node_right->insert(key, tid);
+            } else {
+                insert(key, tid);
+            }
+
+            return keys[this->count-1];
+        }
+
+        // for testing
+
+        inline void set(KEY key, TID tid, unsigned idx) {
+            keys[idx] = key;
+            tids[idx] = tid;
+            this->count++;
+        }
     };
 
 private:
 
     std::atomic<uint64_t> size_;
     std::atomic<uint64_t> root_;
+    std::mutex mutex_;
 
 public:
 
@@ -147,7 +215,60 @@ public:
         return size_;
     }
 
-    void insert(KEY key, TID value);
+    void insert(KEY key, TID value) {
+        BufferFrame* frame_prev = nullptr;
+        InnerNode* node_prev = nullptr;
+        BufferFrame* frame = &buffer_manager_.fixPage(root_, true);
+        Node* node = reinterpret_cast<Node*>(frame->getData());
+        uint64_t page = root_;
+
+        while (true) {
+            bool dirty = false;
+
+            if (node->isFull()) {
+                std::unique_lock<std::mutex> lock(mutex_); // reserve new page and acquire it
+                uint64_t page_right = ++size_;
+                FrameGuard guard(buffer_manager_, page_right, true);
+                lock.unlock();
+
+                if (node->isLeaf()) {
+                    LeafNode* node_right = new(guard.frame.getData()) LeafNode();
+                    KEY separator = reinterpret_cast<LeafNode*>(node)->split(node_right, key, value);
+                    assert(!node_prev->isFull());
+                    node_prev->insert(separator, page_right);
+                    break;
+                } else { // is inner node
+                    InnerNode* node_right = new(guard.frame.getData()) InnerNode();
+                    KEY separator = reinterpret_cast<InnerNode*>(node)->split(node_right);
+                    if (node_prev == nullptr) // node is root
+                    {
+                        lock.lock();
+                        uint64_t page_root = ++size_;
+                        FrameGuard guard_root(buffer_manager_, page_root, true);
+                        lock.unlock();
+                        InnerNode* node_root = new(guard_root.frame.getData()) InnerNode(page);
+                        node_root->insert(separator, page_right);
+                    } else { // node in not root
+                        assert(!node_prev->isFull());
+                        node_prev->insert(separator, page_right);
+                    }
+                }
+            } else { // node has space
+                if (node->isLeaf()) {
+                    reinterpret_cast<LeafNode*>(node)->insert(key, value);
+                    break;
+                }
+            }
+
+            // advance by lock coupling
+            node_prev = reinterpret_cast<InnerNode*>(node);
+            page = node_prev->getPage(key);
+            frame = &buffer_manager_.fixPage(page, true);
+            buffer_manager_.unfixPage(*frame_prev, dirty);
+            frame_prev = frame;
+            node = reinterpret_cast<Node*>(frame->getData());
+        }
+    }
 
     void erase(KEY key);
 
@@ -165,19 +286,19 @@ public:
     // caller must release node frame
     BufferFrame& findLeaf(const KEY key, LeafNode* &leaf, const bool exclusive) const {
 
-        BufferFrame& frame = buffer_manager_.fixPage(root_, false);
-        Node* node = reinterpret_cast<Node*>(frame.getData());
+        BufferFrame* frame = &buffer_manager_.fixPage(root_, exclusive);
+        Node* node = reinterpret_cast<Node*>(frame->getData());
 
         while (!node->isLeaf()) {
-            BufferFrame& frame_child =
-                    buffer_manager_.fixPage(reinterpret_cast<InnerNode*>(node)->getPage(key), false);
-            node = reinterpret_cast<Node*>(frame_child.getData());
-            buffer_manager_.unfixPage(frame, false);
-            frame = frame_child;
+            BufferFrame* frame_next =
+                    &buffer_manager_.fixPage(reinterpret_cast<InnerNode*>(node)->getPage(key), exclusive);
+            node = reinterpret_cast<Node*>(frame_next->getData());
+            buffer_manager_.unfixPage(*frame, false);
+            frame = frame_next;
         }
 
         leaf = reinterpret_cast<LeafNode*>(node);
-        return frame;
+        return *frame;
     }
 };
 
