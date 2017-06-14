@@ -12,6 +12,6 @@ struct IntComparator {
     }
 };
 
-typedef BPlusTree<int, IntComparator> BPT;
+typedef BPlusTree<int, IntComparator, PAGESIZE> BPT;
 
 #endif //DB_BPLUSTREE_HELPER_H

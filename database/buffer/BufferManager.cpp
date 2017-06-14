@@ -1,5 +1,6 @@
 #include <cassert>
 #include <cstring>
+#include <iostream>
 #include "BufferManager.h"
 
 BufferManager::BufferManager(uint64_t pages_in_ram) : cache_size_(pages_in_ram)
@@ -66,6 +67,7 @@ BufferFrame &BufferManager::fixPage(uint64_t page_id, bool exclusive)
         }
     } while (true);
 
+    std::cout << "fix " << frame << std::endl;
     return *frame;
 }
 
@@ -132,6 +134,7 @@ bool BufferManager::putInCache(BufferFrame *frame, std::unique_lock<std::mutex>&
 
 void BufferManager::unfixPage(BufferFrame &frame, bool is_dirty)
 {
+    std::cout << "unfix " << &frame << std::endl;
     std::unique_lock<std::mutex> lock(mutex_);
     frame.dirty_ |= is_dirty;
     frame.unlock();

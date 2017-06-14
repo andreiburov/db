@@ -13,4 +13,4 @@ target_link_libraries(testSplitNode gtest gtest_main)
 
 add_executable(testInsert testInsert.cpp bplustree_helper.h)
 target_link_libraries(testInsert database)
-target_link_libraries(testInsert gtest gmock_main)
+target_link_libraries(testInsert gtest gtest_main)
