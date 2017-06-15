@@ -23,8 +23,12 @@
  *     Returns a TID or indicates that the key was not found
  */
 
-constexpr unsigned nearest_odd_number(unsigned x){
+constexpr unsigned nearest_odd_number(unsigned x) {
     return x - !(x&1);
+}
+
+unsigned divideby2_rounding_up(unsigned x) {
+    return x/2 + (x&1);
 }
 
 template<typename KEY, typename CMP, unsigned BLOCKSIZE>
@@ -90,15 +94,15 @@ public:
 
         inline KEY split(InnerNode* node_right) {
             assert(this->count % 2 != 0 && "Split only even number of refs"); // #refs = #keys+1
-            unsigned from = this->count/2;
+            unsigned from = this->count/2+1; // excluding middle value
             unsigned len = this->count-from;
 
-            memcpy(node_right->keys, keys+from, (len-1)*sizeof(KEY));
-            memcpy(node_right->refs, refs+from, len*sizeof(uint64_t));
-            this->count -= len; // excluding middle value
+            memcpy(node_right->keys, keys+from, len*sizeof(KEY));
+            memcpy(node_right->refs, refs+from, (len+1)*sizeof(uint64_t));
+            this->count -= len+1; // excluding middle value
             node_right->count += len;
 
-            return keys[this->count-1];
+            return keys[this->count];
         }
 
         inline void init(uint64_t page_id) // should be protected by mutex, root is invalid until right refs is added
@@ -127,14 +131,7 @@ public:
 
         // for tesing
 
-        InnerNode(uint64_t left_ref) : Node(false) { refs[0] = left_ref; }
-
-        inline void refLeft(KEY key, uint64_t page_id, unsigned idx) {
-            keys[idx] = key;
-            refs[idx] = page_id;
-        }
-
-        inline void refRight(KEY key, uint64_t page_id, unsigned idx) {
+        inline void insert(KEY key, uint64_t page_id, unsigned idx) {
             keys[idx] = key;
             refs[idx+1] = page_id;
             this->count++;
@@ -194,6 +191,13 @@ public:
 
         inline KEY split(LeafNode* node_right, KEY key, TID tid) {
             unsigned from = this->count/2;
+            bool insert_right = false;
+
+            if (CMP()(key, keys[from]) >= 0) {
+                insert_right = true;
+                from++;
+            }
+
             unsigned len = this->count-from;
 
             memcpy(node_right->keys, keys+from, len*sizeof(KEY));
@@ -201,7 +205,7 @@ public:
             this->count -= len;
             node_right->count += len;
 
-            if (CMP()(key, keys[this->count-1]) > 0) {
+            if (insert_right) {
                 node_right->insert(key, tid);
             } else {
                 insert(key, tid);
