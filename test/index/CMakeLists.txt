@@ -1,4 +1,4 @@
-add_executable(btreetest bplustree_test.cpp)
+add_executable(btreetest btreetest.cpp)
 target_link_libraries(btreetest database)
 
 include_directories(${gtest_SOURCE_DIR}/include)

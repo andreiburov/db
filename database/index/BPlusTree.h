@@ -6,6 +6,7 @@
 #include "../slotted_pages/Segment.h"
 #include "../slotted_pages/TID.h"
 #include "../dbms.h"
+#include <iostream>
 
 /* B+ Tree index segment
  *
@@ -25,10 +26,6 @@
 
 constexpr unsigned nearest_odd_number(unsigned x) {
     return x - !(x&1);
-}
-
-unsigned divideby2_rounding_up(unsigned x) {
-    return x/2 + (x&1);
 }
 
 template<typename KEY, typename CMP, unsigned BLOCKSIZE>
@@ -64,14 +61,14 @@ public:
             return lo;
         }
 
-        inline virtual bool isFull() const = 0;
+        virtual bool isFull() const = 0;
 
         Node(bool leaf) : leaf(leaf), count(0) {}
     };
 
     struct InnerNode : public Node {
-        static const unsigned MAX_COUNT = /*nearest_odd_number(*/ // must be odd, for convenient splitting
-                (BLOCKSIZE-sizeof(unsigned)-sizeof(Node)-sizeof(uint64_t))/(sizeof(KEY)+sizeof(uint64_t))/*)*/;
+        static const unsigned MAX_COUNT = nearest_odd_number( // must be odd, for convenient splitting
+                (BLOCKSIZE-sizeof(unsigned)-sizeof(Node)-sizeof(uint64_t))/(sizeof(KEY)+sizeof(uint64_t)));
         KEY keys[MAX_COUNT];
         uint64_t refs[MAX_COUNT+1];
 
@@ -93,7 +90,7 @@ public:
         }
 
         inline KEY split(InnerNode* node_right) {
-            assert(this->count % 2 != 0 && "Split only even number of refs"); // #refs = #keys+1
+            assert(this->count % 2 != 0 && "Split only even number of refs"); // #keys
             unsigned from = this->count/2+1; // excluding middle value
             unsigned len = this->count-from;
 
@@ -120,7 +117,9 @@ public:
                 return;
             }
 
-            assert(keys[idx-1] != separator && "Two identical separators! What's inbetween?");
+            if (idx > 0) {
+                assert(CMP()(keys[idx - 1], separator) != 0 && "Two identical separators! What's inbetween?");
+            }
 
             memmove(keys+idx+1, keys+idx, (this->count-idx)*sizeof(KEY));
             memmove(refs+idx+2, refs+idx+1, (this->count-idx)*sizeof(uint64_t));
@@ -159,12 +158,12 @@ public:
 
         inline bool getTID(const KEY key, TID& tid) const {
             unsigned idx = getKeyIndex(key);
-            if (keys[idx] == key) {
-                tid = tids[idx];
-                return true;
+            if (idx >= this->count || CMP()(keys[idx], key) != 0) {
+                return false;
             }
 
-            return false;
+            tid = tids[idx];
+            return true;
         }
 
         inline void insert(KEY key, TID tid) {
@@ -177,7 +176,7 @@ public:
                 return;
             }
 
-            if (keys[idx] == key) { // overwrite
+            if (CMP()(keys[idx], key) == 0) { // overwrite
                 tids[idx] = tid;
                 return;
             }
@@ -214,6 +213,20 @@ public:
             return keys[this->count-1];
         }
 
+        bool remove(KEY key) {
+            unsigned idx = getKeyIndex(key);
+            if (idx >= this->count)
+                return false;
+
+            if (CMP()(keys[idx], key) != 0)
+                return false;
+
+            memmove(keys+idx, keys+idx+1, (this->count-idx-1) * sizeof(KEY));
+            memmove(tids+idx, tids+idx+1, (this->count-idx-1) * sizeof(TID));
+            this->count--;
+            return true;
+        }
+
         // for testing
 
         inline void set(KEY key, TID tid, unsigned idx) {
@@ -223,23 +236,23 @@ public:
         }
     };
 
-private:
-
-    std::atomic<uint64_t> size_;
+// private: exposed for testing
     std::atomic<uint64_t> root_;
-    std::mutex mutex_;
+
+private:
+    std::atomic<uint64_t> size_;
 
 public:
 
     BPlusTree(BufferManager& buffer_manager, uint64_t segment_id)
-            : Segment(buffer_manager, segment_id), size_(0) , root_(GetFirstPage(segment_id))
+            : Segment(buffer_manager, segment_id), root_(GetFirstPage(segment_id)), size_(0)
     {
         assert(sizeof(InnerNode) <= BLOCKSIZE && "InnerNode larger than BLOCKSIZE");
         assert(sizeof(LeafNode) <= BLOCKSIZE && "LeafNode larger than BLOCKSIZE");
 
         FrameGuard guard(buffer_manager_, root_, true);
         new(guard.frame.getData()) LeafNode();
-        size_++;
+        max_page_++;
     }
 
     inline uint64_t size() {
@@ -256,14 +269,14 @@ public:
         while (true) {
 
             if (node->isFull()) {
-                std::unique_lock<std::mutex> lock(mutex_); // reserve new page and acquire it
-                uint64_t page_right = GetFirstPage(segment_id_) + size_++;
+                std::unique_lock<std::mutex> lock(this->mutex_); // reserve new page and acquire it
+                uint64_t page_right = GetFirstPage(segment_id_) + max_page_++;
                 FrameGuard guard(buffer_manager_, page_right, true);
                 lock.unlock();
 
                 if (node_prev == nullptr) { // current node is root
                     lock.lock();
-                    uint64_t page_prev = GetFirstPage(segment_id_) + size_++;
+                    uint64_t page_prev = GetFirstPage(segment_id_) + max_page_++;
                     frame_prev = &buffer_manager_.fixPage(page_prev, true);
                     root_ = page_prev;
                     lock.unlock();
@@ -282,16 +295,22 @@ public:
                     KEY separator = reinterpret_cast<InnerNode*>(node)->split(node_right);
                     assert(!node_prev->isFull());
                     node_prev->insert(separator, page_right);
+                    if (CMP()(key, separator) > 0) {
+                        node_prev = reinterpret_cast<InnerNode*>(node_right);
+                    } else {
+                        node_prev = reinterpret_cast<InnerNode*>(node);
+                    }
                 }
             } else { // node has space
                 if (node->isLeaf()) {
                     reinterpret_cast<LeafNode*>(node)->insert(key, value);
                     break;
+                } else { // is inner node
+                    node_prev = reinterpret_cast<InnerNode*>(node);
                 }
             }
 
             // advance by lock coupling
-            node_prev = reinterpret_cast<InnerNode*>(node);
             page = node_prev->getPage(key);
             BufferFrame* temp = frame;
             frame = &buffer_manager_.fixPage(page, true);
@@ -300,11 +319,20 @@ public:
             node = reinterpret_cast<Node*>(frame->getData());
         }
 
+        ++size_;
         buffer_manager_.unfixPage(*frame, true);
         if (frame_prev) buffer_manager_.unfixPage(*frame_prev, true);
     }
 
-    void erase(KEY key);
+    void erase(KEY key) {
+        LeafNode* leaf = nullptr;
+        BufferFrame& frame = findLeaf(key, leaf, false);
+        assert(leaf->isLeaf());
+        if (leaf->remove(key)) {
+            --size_;
+        }
+        buffer_manager_.unfixPage(frame, true);
+    }
 
     bool lookup(KEY key, TID& tid) {
         LeafNode* leaf = nullptr;

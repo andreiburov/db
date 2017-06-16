@@ -67,7 +67,7 @@ BufferFrame &BufferManager::fixPage(uint64_t page_id, bool exclusive)
         }
     } while (true);
 
-    std::cout << "fix " << frame << std::endl;
+    //std::cout << "fix " << frame << std::endl;
     return *frame;
 }
 
@@ -134,7 +134,7 @@ bool BufferManager::putInCache(BufferFrame *frame, std::unique_lock<std::mutex>&
 
 void BufferManager::unfixPage(BufferFrame &frame, bool is_dirty)
 {
-    std::cout << "unfix " << &frame << std::endl;
+    //std::cout << "unfix " << &frame << std::endl;
     std::unique_lock<std::mutex> lock(mutex_);
     frame.dirty_ |= is_dirty;
     frame.unlock();

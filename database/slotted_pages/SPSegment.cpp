@@ -9,7 +9,7 @@ TID SPSegment::insert(const Record &r) {
     uint16_t slot_id = -1;
     Header* header;
 
-    for (;page_offset < max_page_id_; ++page_offset)
+    for (;page_offset < max_page_; ++page_offset)
     {
         FrameGuard guard(buffer_manager_, GetFirstPage(segment_id_)+page_offset, true);
         header = reinterpret_cast<Header*>(guard.frame.getData());
@@ -47,9 +47,11 @@ TID SPSegment::insert(const Record &r) {
 
     FrameGuard guard(buffer_manager_, GetFirstPage(segment_id_)+page_offset, true);
 
-    if (page_offset == max_page_id_) // create new page
+    // in multithreaded environment max_page_ could have been incremented to this point
+    // ergo the page was already created, we should rewrite this part
+    if (page_offset == max_page_) // create new page
     {
-        max_page_id_++;
+        max_page_++;
         slot_id = 0;
         Header* header = new(guard.frame.getData()) Header();
         Slot* slot = new(getFirstSlot(header)) Slot();

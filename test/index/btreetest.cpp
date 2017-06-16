@@ -28,8 +28,8 @@ struct Char {
 /* Comparator functor for char */
 template <unsigned len>
 struct MyCustomCharCmp {
-    bool operator()(const Char<len>& a, const Char<len>& b) const {
-        return memcmp(a.data, b.data, len) < 0;
+    int operator()(const Char<len>& a, const Char<len>& b) const {
+        return memcmp(a.data, b.data, len);
     }
 };
 
@@ -37,7 +37,7 @@ typedef std::pair<uint32_t, uint32_t> IntPair;
 
 /* Comparator for IntPair */
 struct MyCustomIntPairCmp {
-    bool operator()(const IntPair& a, const IntPair& b) const {
+    int operator()(const IntPair& a, const IntPair& b) const {
         if (a.first == b.first) {
             if (a.second == b.second)
                 return 0;
@@ -45,10 +45,11 @@ struct MyCustomIntPairCmp {
                 return -1;
             else
                 return 1;
-        } else if (a.first < b.first)
+        } else if (a.first < b.first) {
             return -1;
-        else
+        } else {
             return 1;
+        }
     }
 };
 
@@ -79,8 +80,8 @@ const IntPair& getKey(const uint64_t& i) {
 template <class T, class CMP>
 void test(uint64_t n) {
     // Set up stuff, you probably have to change something here to match to your interfaces
-    BufferManager bm(100);
-    BPlusTree<T, CMP> bTree(bm, 2);
+    BufferManager bm(1000);
+    BPlusTree<T, CMP, 4096U> bTree(bm, 2);
 
     // Insert values
     for (uint64_t i=0; i<n; ++i)

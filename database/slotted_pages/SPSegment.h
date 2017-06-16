@@ -85,14 +85,10 @@ public:
         }
     };
 
-private:
-
-    std::atomic<uint64_t> max_page_id_;
-
 public:
 
     SPSegment(BufferManager& buffer_manager, uint64_t segment_id)
-        : Segment(buffer_manager, segment_id), max_page_id_(0) {}
+        : Segment(buffer_manager, segment_id) {}
 
     ~SPSegment() {}
 
