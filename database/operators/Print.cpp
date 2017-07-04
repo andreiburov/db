@@ -10,12 +10,13 @@ void Print::close() {
 
 bool Print::next() {
     output_.clear();
+
     if(!input_->next()) { return false; }
     output_ = input_->getOutput();
     for (auto reg : output_)
     {
         switch (reg.getType()) {
-            Integer:
+            case Type::Integer:
                 output_stream_ << reg.getInteger();
                 break;
             default:
@@ -23,6 +24,8 @@ bool Print::next() {
                 break;
         }
     }
+
+    output_stream_ << std::endl;
 
     return true;
 }

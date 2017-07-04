@@ -19,3 +19,7 @@ target_link_libraries(testSelection gtest gtest_main)
 add_executable(testProjection testProjection.cpp)
 target_link_libraries(testProjection database)
 target_link_libraries(testProjection gtest gtest_main)
+
+add_executable(testPrint testPrint.cpp)
+target_link_libraries(testPrint database)
+target_link_libraries(testPrint gtest gtest_main)
