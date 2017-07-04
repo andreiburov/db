@@ -3,8 +3,8 @@
 
 #include <atomic>
 #include <cassert>
-#include "../slotted_pages/Segment.h"
-#include "../slotted_pages/TID.h"
+#include "../slotted/Segment.h"
+#include "../slotted/TID.h"
 #include "../dbms.h"
 #include <iostream>
 
@@ -239,13 +239,10 @@ public:
 // private: exposed for testing
     std::atomic<uint64_t> root_;
 
-private:
-    std::atomic<uint64_t> size_;
-
 public:
 
     BPlusTree(BufferManager& buffer_manager, uint64_t segment_id)
-            : Segment(buffer_manager, segment_id), root_(GetFirstPage(segment_id)), size_(0)
+            : Segment(buffer_manager, segment_id), root_(GetFirstPage(segment_id))
     {
         assert(sizeof(InnerNode) <= BLOCKSIZE && "InnerNode larger than BLOCKSIZE");
         assert(sizeof(LeafNode) <= BLOCKSIZE && "LeafNode larger than BLOCKSIZE");
@@ -253,10 +250,6 @@ public:
         FrameGuard guard(buffer_manager_, root_, true);
         new(guard.frame.getData()) LeafNode();
         max_page_++;
-    }
-
-    inline uint64_t size() {
-        return size_;
     }
 
     void insert(KEY key, TID value) {
@@ -319,7 +312,7 @@ public:
             node = reinterpret_cast<Node*>(frame->getData());
         }
 
-        ++size_;
+        ++this->size_;
         buffer_manager_.unfixPage(*frame, true);
         if (frame_prev) buffer_manager_.unfixPage(*frame_prev, true);
     }
@@ -329,7 +322,7 @@ public:
         BufferFrame& frame = findLeaf(key, leaf, false);
         assert(leaf->isLeaf());
         if (leaf->remove(key)) {
-            --size_;
+            --this->size_;
         }
         buffer_manager_.unfixPage(frame, true);
     }

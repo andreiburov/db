@@ -98,6 +98,8 @@ public:
 
     Record lookup(TID tid);
 
+    std::vector<Record> lookupRecordsInPage(uint64_t page_id);
+
     bool update(TID tid, const Record& r);
 
     // private: exposed for tests
@@ -109,6 +111,8 @@ public:
     inline Slot* getFirstSlot(Header* header) {
         return reinterpret_cast<Slot*>(reinterpret_cast<char*>(header)+sizeof(Header));
     }
+
+    inline uint64_t getNumberOfRecords() { return this->size_; }
 
 private:
 

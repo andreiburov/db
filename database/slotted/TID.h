@@ -29,6 +29,12 @@ struct TID {
         return slot_id != other.slot_id ||
                page_offset != other.page_offset;
     }
+
+    TID& operator++() // prefix increment
+    {
+        slot_id++;
+        return *this;
+    }
 };
 
 namespace std {

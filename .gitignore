@@ -79,5 +79,3 @@ cmake-build-debug/
 
 .idea/
 *.user
-
-test/libs

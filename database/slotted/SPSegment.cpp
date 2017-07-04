@@ -61,6 +61,8 @@ TID SPSegment::insert(const Record &r) {
         insert(r, header, slot);
     }
 
+    ++this->size_;
+
     return TID(slot_id, page_offset);
 }
 
@@ -101,6 +103,8 @@ bool SPSegment::remove(TID tid) {
         slot.setFree();
     }
 
+    --this->size_;
+
     return true;
 }
 
@@ -116,6 +120,26 @@ Record SPSegment::lookup(TID tid) {
     } else {
         return Record(slot.length, data + slot.offset);
     }
+}
+
+//TODO: should rethink the design for multhithreading
+std::vector<Record> SPSegment::lookupRecordsInPage(uint64_t page_id)
+{
+    FrameGuard guard(buffer_manager_, page_id, false);
+    std::vector<Record> records;
+
+    char* data = reinterpret_cast<char*>(guard.frame.getData());
+    Header* header = reinterpret_cast<Header*>(data);
+    for (TID tid; tid.slot_id < header->slot_count; ++tid) {
+        Slot& slot = reinterpret_cast<Slot*>(data+sizeof(Header))[tid.slot_id];
+        if (slot.isRedirection()) {
+            records.push_back(lookup(slot.getRedirection()));
+        } else {
+            records.push_back(Record(slot.length, data + slot.offset));
+        }
+    }
+
+    return records;
 }
 
 bool SPSegment::update(TID tid, const Record &r) {
