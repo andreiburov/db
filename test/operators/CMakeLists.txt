@@ -11,3 +11,11 @@ target_link_libraries(testTableScan gtest gtest_main)
 add_executable(testHashInnerJoin testHashInnerJoin.cpp)
 target_link_libraries(testHashInnerJoin database)
 target_link_libraries(testHashInnerJoin gtest gtest_main)
+
+add_executable(testSelection testSelection.cpp)
+target_link_libraries(testSelection database)
+target_link_libraries(testSelection gtest gtest_main)
+
+add_executable(testProjection testProjection.cpp)
+target_link_libraries(testProjection database)
+target_link_libraries(testProjection gtest gtest_main)

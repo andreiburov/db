@@ -8,5 +8,8 @@
 #include "operators/Register.h"
 #include "operators/TableScan.h"
 #include "operators/HashInnerJoin.h"
+#include "operators/Selection.h"
+#include "operators/Projection.h"
+#include "operators/Print.h"
 
 #endif //DB_DBMS_H

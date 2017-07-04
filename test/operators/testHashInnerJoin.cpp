@@ -52,4 +52,7 @@ TEST(HashInnerJoin, Simple) {
     ASSERT_EQ(20, out[7].getInteger());
 
     ASSERT_FALSE(inner_join.next());
+
+    delete t1;
+    delete t2;
 }

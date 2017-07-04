@@ -12,6 +12,7 @@ bool Selection::next() {
 
         if (id_ < input.size()) {
             if (input[id_] == constant_) {
+                output_.insert(output_.end(), input.begin(), input.end());
                 return true;
             }
         } else {

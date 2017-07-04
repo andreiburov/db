@@ -16,9 +16,10 @@ bool Projection::next() {
                 throw std::out_of_range("column id is too large");
             } else {
                 output_.push_back(input[i]);
-                return true;
             }
         }
+        
+        return true;
     }
 
     return false;
