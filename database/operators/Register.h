@@ -38,6 +38,21 @@ public:
         return type_;
     }
 
+    bool operator==(const Register& other) const {
+        if (type_ != other.type_) {
+            return false;
+        }
+
+        switch (type_) {
+            case Type::Integer:
+                return getInteger() == other.getInteger();
+            case Type::String:
+                return getString().compare(other.getString()) == 0;
+            default:
+                return false;
+        }
+    }
+
     inline size_t hash() const {
         switch(type_) {
             case Type::Integer:

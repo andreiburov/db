@@ -7,7 +7,6 @@
 
 class Operator {
 protected:
-    std::vector<Record> records_;
     std::vector<Register> output_;
 
 public:

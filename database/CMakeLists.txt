@@ -20,14 +20,14 @@ set(bplus_SOURCE_FILES
 
 set(operators_SOURCE_FILES
         operators/Register.h
-        operators/Operator.h operators/TableScan.cpp operators/TableScan.h operators/Print.cpp operators/Print.h operators/Projection.cpp operators/Projection.h)
+        operators/Operator.h operators/TableScan.cpp operators/TableScan.h operators/Print.cpp operators/Print.h operators/Projection.cpp operators/Projection.h operators/Selection.cpp operators/Selection.h operators/HashInnerJoin.cpp operators/HashInnerJoin.h)
 
 set(relations_SOURCE_FILES
         relations/Type.h
         relations/Schema.h)
 
 set(utils_SOURCE_FILES
-        utils/LockGuards.h)
+        utils/LockGuards.h operators/Selection.cpp operators/Selection.h)
 
 add_library(database
         ${buffer_SOURCE_FILES}

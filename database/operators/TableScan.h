@@ -18,6 +18,7 @@ class TableScan : public Operator
 private:
     Schema::Relation& relation_;
     SPSegment& segment_;
+    std::vector<Record> records_;
     uint64_t current_page_;
     uint64_t registered_;
 
