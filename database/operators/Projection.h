@@ -19,7 +19,7 @@ public:
 
     void close();
 
-    std::vector<Register> getOutput();
+    std::vector<Register> getOutput() const;
 };
 
 #endif //DB_PROJECTION_H

@@ -9,6 +9,7 @@ void Print::close() {
 }
 
 bool Print::next() {
+    output_.clear();
     if(!input_->next()) { return false; }
     output_ = input_->getOutput();
     for (auto reg : output_)

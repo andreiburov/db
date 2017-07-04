@@ -7,3 +7,7 @@ target_link_libraries(testRegister gtest gtest_main)
 add_executable(testTableScan testTableScan.cpp)
 target_link_libraries(testTableScan database)
 target_link_libraries(testTableScan gtest gtest_main)
+
+add_executable(testHashInnerJoin testHashInnerJoin.cpp)
+target_link_libraries(testHashInnerJoin database)
+target_link_libraries(testHashInnerJoin gtest gtest_main)

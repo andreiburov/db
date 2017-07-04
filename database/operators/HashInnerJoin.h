@@ -23,7 +23,7 @@ public:
 
     void close();
 
-    std::vector<Register> getOutput();
+    std::vector<Register> getOutput() const;
 };
 
 #endif //DB_HASHINNERJOIN_H

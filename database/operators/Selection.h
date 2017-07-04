@@ -19,7 +19,7 @@ public:
 
     bool next();
 
-    std::vector<Register> getOutput();
+    std::vector<Register> getOutput() const;
 
     void close();
 };

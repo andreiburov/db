@@ -13,14 +13,16 @@ void HashInnerJoin::open() {
 bool HashInnerJoin::next() {
     output_.clear();
 
-    while (!right_input_->next()) {
-        auto input_right = left_input_->getOutput();
+    while (right_input_->next()) {
+        auto input_right = right_input_->getOutput();
         auto it = hash_.find(input_right[right_id_]);
         if (it == hash_.end()) continue;
 
         auto input_left = it->second;
         output_.insert(output_.end(), input_left.begin(), input_left.end());
         output_.insert(output_.end(), input_right.begin(), input_right.end());
+
+        return true;
     }
 
     return false;
@@ -31,6 +33,6 @@ void HashInnerJoin::close() {
     right_input_->close();
 }
 
-std::vector<Register> HashInnerJoin::getOutput() {
+std::vector<Register> HashInnerJoin::getOutput() const {
     return output_;
 }

@@ -12,6 +12,7 @@ void TableScan::close() {
 
 bool TableScan::next() {
 
+    output_.clear();
     if (GetPageOffset(current_page_) > segment_.getMaxPageId()) { return false; }
 
     if (records_.size() <= registered_) {
@@ -32,7 +33,6 @@ std::vector<Register> TableScan::getOutput() const {
 }
 
 void TableScan::produceRegisters(const Record& record) {
-    output_.clear();
     char* record_data = const_cast<char*>(record.getData());
     for (auto& attribute : relation_.attributes) {
         Register reg;

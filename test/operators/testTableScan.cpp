@@ -1,57 +1,20 @@
 #include "gtest/gtest.h"
 #include "../../database/dbms.h"
-
-struct RecordHelper {
-    char payload[1024];
-    unsigned len;
-
-    RecordHelper(Schema::Relation relation,
-                 const char* name, unsigned name_len,
-                 DB_INT age,
-                 const char* city, unsigned city_len,
-                 DB_INT number)
-    {
-        char* p = payload;
-        void* v[] = {const_cast<char*>(name), &age, const_cast<char*>(city), &number};
-        unsigned i = 0;
-
-        for (auto& attr : relation.attributes) {
-            memset(p, '\0', attr.length);
-            memcpy(p, v[i++], attr.length);
-            p += attr.length;
-        }
-
-        len = p - payload;
-    }
-
-    Record get() {
-        return Record(len, payload);
-    }
-};
+#include "OperatorsHelper.h"
 
 TEST(TableScan, ReadWrite)
 {
-    BufferManager bm(100);
-    SPSegment segment(bm, 1);
-    Schema::Relation relation("Profile");
-    Schema::Relation::Attribute a1("name", Type::String, 20);
-    Schema::Relation::Attribute a2("age", Type::Integer, sizeof(DB_INT));
-    Schema::Relation::Attribute a3("city", Type::String, 25);
-    Schema::Relation::Attribute a4("number", Type::Integer, sizeof(DB_INT));
-    relation.addAttribute(a1);
-    relation.addAttribute(a2);
-    relation.addAttribute(a3);
-    relation.addAttribute(a4);
+    init();
 
-    RecordHelper r1(relation, "Andrei", sizeof("Andrei"), 21, "Saint-Petersburg", sizeof("Saint-Petersburg"), 12345);
-    RecordHelper r2(relation, "Viktoria", sizeof("Viktoria"), 18, "Kopenhagen", sizeof("Kopenhagen"), 68733);
-    RecordHelper r3(relation, "Grizzy", sizeof("Grizzy"), 30, "Leipzig", sizeof("Leipzig"), 778123);
+    RecordHelper r1(relation1, "Andrei", sizeof("Andrei"), 21, "Saint-Petersburg", sizeof("Saint-Petersburg"), 12345);
+    RecordHelper r2(relation1, "Viktoria", sizeof("Viktoria"), 18, "Kopenhagen", sizeof("Kopenhagen"), 68733);
+    RecordHelper r3(relation1, "Grizzy", sizeof("Grizzy"), 30, "Leipzig", sizeof("Leipzig"), 778123);
 
-    segment.insert(r1.get());
-    segment.insert(r2.get());
-    segment.insert(r3.get());
+    segment1.insert(r1.get());
+    segment1.insert(r2.get());
+    segment1.insert(r3.get());
 
-    TableScan ts(relation, segment);
+    TableScan ts(relation1, segment1);
     ts.open();
 
     std::vector<Register> out;

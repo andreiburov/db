@@ -7,17 +7,18 @@ void Projection::open() {
 }
 
 bool Projection::next() {
-    while (!input_->next()) {
+    output_.clear();
+    while (input_->next()) {
         auto input = input_->getOutput();
 
         for (auto i : indices_) {
             if (i >= input.size()) {
                 throw std::out_of_range("column id is too large");
+            } else {
+                output_.push_back(input[i]);
+                return true;
             }
-            output_.push_back(input[i]);
         }
-
-        continue;
     }
 
     return false;
@@ -27,6 +28,6 @@ void Projection::close() {
     input_->close();
 }
 
-std::vector<Register> Projection::getOutput() {
+std::vector<Register> Projection::getOutput() const {
     return output_;
 }

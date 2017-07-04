@@ -6,7 +6,8 @@ void Selection::open() {
 }
 
 bool Selection::next() {
-    while (!input_->next()) {
+    output_.clear();
+    while (input_->next()) {
         auto input = input_->getOutput();
 
         if (id_ < input.size()) {
@@ -23,7 +24,7 @@ bool Selection::next() {
     return false;
 }
 
-std::vector<Register> Selection::getOutput() {
+std::vector<Register> Selection::getOutput() const {
     return output_;
 }
 
