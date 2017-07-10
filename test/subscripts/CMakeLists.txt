@@ -1,0 +1,4 @@
+include_directories(${gtest_SOURCE_DIR}/include)
+add_executable(arithmetictest arithmetictest.cpp arithmetictest.cpp)
+target_link_libraries(arithmetictest subscripts)
+target_link_libraries(arithmetictest gtest gtest_main)

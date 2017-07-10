@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.2)
 
 project(db)
 
@@ -7,3 +7,4 @@ add_executable(${PROJECT_NAME} "main.cpp")
 
 add_subdirectory(database)
 add_subdirectory(test)
+add_subdirectory(subscripts)
