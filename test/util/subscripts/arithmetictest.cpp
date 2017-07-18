@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "../../subscripts/arithmetic/ArithmeticModule.h"
+#include "../../../util/subscripts/arithmetic/ArithmeticModule.h"
 
 ArithmeticModule amc;
 

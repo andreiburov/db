@@ -1,0 +1,2 @@
+add_subdirectory(subscripts)
+add_subdirectory(hashtables)
